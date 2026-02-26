@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import com.example.animationcalendar.ui.CalendarData.spendingData
 import com.example.animationcalendar.ui.theme.AnimationCalendarTheme
 import com.guru.fontawesomecomposelib.FaIcon
 import com.guru.fontawesomecomposelib.FaIcons
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -127,7 +129,6 @@ fun CalendarDayList() {
     date.set(Calendar.MONTH, Calendar.JANUARY)
     date.set(Calendar.DAY_OF_MONTH, 1)
 
-    // ?
     // 달력계산 공식
     val thisMonthDayMax = date.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfWeek = date.get(Calendar.DAY_OF_WEEK) - 1
@@ -208,17 +209,19 @@ fun CalendarDayList() {
 fun CalendarDayLazyList() {
     val lazyColumnState = rememberLazyListState()
     val lazyRowState = rememberLazyListState()
-    val isScrolling = remember { mutableStateOf(false) } // by ?
+    val isScrolling = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // ?
         snapshotFlow { lazyColumnState.isScrollInProgress }.collect {
             isScrolling.value = it
         }
     }
-    // ?
-    LaunchedEffect(lazyColumnState.firstVisibleItemIndex) {
-        lazyRowState.scrollToItem(lazyRowState.firstVisibleItemIndex)
+    LaunchedEffect(Unit) {
+        snapshotFlow { lazyColumnState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { idx ->
+                lazyRowState.scrollToItem(idx) // 또는 animateScrollToItem(idx)
+            }
     }
 
     if (isScrolling.value) {
@@ -270,7 +273,7 @@ fun CalendarDayLazyList() {
         CalendarDayList()
     }
     LazyColumn(modifier = Modifier.padding(20.dp), state = lazyColumnState) {
-        // key?
+
         spendingData.keys.forEach { day ->
             item {
                 Text(
